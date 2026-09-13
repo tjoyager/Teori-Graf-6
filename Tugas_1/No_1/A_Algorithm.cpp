@@ -1,90 +1,133 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+typedef pair<double, long> pPair;
+
+struct cell {
+    long parent;
+    double f, g, h;
+};
+
 vector<vector<pair<long,long>>> adjList;
+vector<pair<double,double>> coord;
+long vertexCount, edgeCount;
 
-void addEdge(long u, long v, long w){
-    adjList[u].push_back({v, w});
-    adjList[v].push_back({u, w});
+double calculateHValue(long u, long end){
+    double dx = coord[u].first  - coord[end].first;
+    double dy = coord[u].second - coord[end].second;
+    return sqrt(dx * dx + dy * dy);
 }
 
-double heuristic(int u, int end){
-    return 0;
+bool isValid(long v){
+    return v >= 1 && v <= vertexCount;
 }
 
-struct Node {
-    long vertex;
-    double f;
-};
+bool isDestination(long v, long end){
+    return v == end;
+}
 
-struct Compare {
-    bool operator()(const Node &a, const Node &b){ return a.f > b.f; }
-};
+void tracePath(vector<cell> &cellDetails, long end){
+    printf("Jalur: ");
+    long v = end;
+    stack<long> path;
 
-vector<long> aStar(long start, long end, long &pathCost, long vertexCount){
-    vector<double> gScore(vertexCount + 1, DBL_MAX/2);
-    vector<long> parent(vertexCount + 1, -1);
-    vector<bool> closed(vertexCount + 1, false);
+    while(cellDetails[v].parent != v){
+        path.push(v);
+        v = cellDetails[v].parent;
+    }
+    path.push(v);
 
-    priority_queue<Node, vector<Node>, Compare> open;
-    gScore[start] = 0;
-    open.push({start, heuristic((int)start, (int)end)});
+    while(!path.empty()){
+        printf("v%ld", path.top());
+        path.pop();
+        if(!path.empty()) printf(" -> ");
+    }
+    printf("\n");
+}
 
-    while(!open.empty()){
-        Node cur = open.top(); open.pop();
+void aStarSearch(long start, long end){
 
-        if(closed[cur.vertex]) continue;
-        closed[cur.vertex] = true;
 
-        if(cur.vertex == end) break;
+    vector<bool> closedList(vertexCount + 1, false);
+    vector<cell> cellDetails(vertexCount + 1);
 
-        for(auto &edge : adjList[cur.vertex]){
+    for(long i = 1; i <= vertexCount; i++){
+        cellDetails[i].f = DBL_MAX;
+        cellDetails[i].g = DBL_MAX;
+        cellDetails[i].h = DBL_MAX;
+        cellDetails[i].parent = -1;
+    }
+
+    long i = start;
+    cellDetails[i].f = 0.0;
+    cellDetails[i].g = 0.0;
+    cellDetails[i].h = 0.0;
+    cellDetails[i].parent = i;
+
+    set<pPair> openList;
+    openList.insert(make_pair(0.0, i));
+
+    bool foundDest = false;
+
+    while(!openList.empty()){
+        pPair p = *openList.begin();
+        openList.erase(openList.begin());
+
+        i = p.second;
+        closedList[i] = true;
+
+        if(isDestination(i, end) == true){
+            tracePath(cellDetails, end);
+            printf("Total cost: %.0f\n", cellDetails[end].g);
+            foundDest = true;
+            return;
+        }
+
+        for(auto &edge : adjList[i]){
             long next = edge.first;
             long w = edge.second;
-            double tentativeG = gScore[cur.vertex] + w;
 
-            if(tentativeG < gScore[next]){
-                gScore[next] = tentativeG;
-                parent[next] = cur.vertex;
-                double f = tentativeG + heuristic((int)next, (int)end);
-                open.push({next, f});
+            if(closedList[next] == false){
+                double gNew = cellDetails[i].g + w;
+                double hNew = calculateHValue(next, end);
+                double fNew = gNew + hNew;
+
+                if(cellDetails[next].f == DBL_MAX || cellDetails[next].f > fNew){
+                    openList.insert(make_pair(fNew, next));
+                    cellDetails[next].f = fNew;
+                    cellDetails[next].g = gNew;
+                    cellDetails[next].h = hNew;
+                    cellDetails[next].parent = i;
+                }
             }
         }
     }
 
-    pathCost = (gScore[end] >= DBL_MAX/2) ? -1 : (long)gScore[end];
-
-    vector<long> path;
-    if(pathCost != -1){
-        for(long v = end; v != -1; v = parent[v]) path.push_back(v);
-        reverse(path.begin(), path.end());
-    }
-    return path;
+    if(foundDest == false)
+        printf("Tidak ada jalur ke tujuan\n");
 }
 
 int main(void){
-    long vertexCount, edgeCount;
     cin >> vertexCount >> edgeCount;
 
     adjList.assign(vertexCount + 1, {});
+    coord.assign(vertexCount + 1, make_pair(0.0, 0.0));
 
-    for(long i = 0; i < edgeCount; i++){
+    for(long e = 0; e < edgeCount; e++){
         long u, v, w;
         cin >> u >> v >> w;
-        addEdge(u, v, w);
+        adjList[u].push_back(make_pair(v, w));
+        adjList[v].push_back(make_pair(u, w));
+    }
+
+    for(long i = 1; i <= vertexCount; i++){
+        cin >> coord[i].first >> coord[i].second;
     }
 
     long start, end;
     cin >> start >> end;
 
-    long pathCost;
-    vector<long> path = aStar(start, end, pathCost, vertexCount);
-
-    if(pathCost == -1){
-        cout << "\nTidak ada jalur dari v-" << start << " ke v-" << end << "\n";
-    } else {
-        cout << "\nJarak terpendek v-" << start << " -> v-" << end << " = " << pathCost << "\n";
-    }
+    aStarSearch(start, end);
 
     return 0;
 }
