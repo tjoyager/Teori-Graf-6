@@ -97,7 +97,13 @@ int main(void) {
         cout << "\nMatriks Langkah Bidak (0 - 63):\n\n";
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                cout << setw(3) << papan[i][j] << " ";
+                if (papan[i][j] == 0) {
+                    cout << "\033[1;32m" << setw(3) << papan[i][j] << "\033[0m "; //Start hijau
+                } else if (papan[i][j] == 63) {
+                    cout << "\033[1;31m" << setw(3) << papan[i][j] << "\033[0m "; //Finish merah
+                } else {
+                    cout << setw(3) << papan[i][j] << " ";
+                }
             }
             cout << "\n\n";
         }
